@@ -7,7 +7,7 @@ use sha3::{Digest, Keccak256};
 pub enum Node {
     Leaf(Vec<u8>, Vec<u8>),
     Extension(Vec<u8>, Box<Node>),
-    Branch([Box<Node>; 16], Vec<u8>),
+    Branch([Box<Node>; 16], Option<Vec<u8>>),
     Blank,
 }
 
@@ -60,11 +60,10 @@ impl Node {
                     }
                 }
 
-                if value.len() == 0 {
-                    stream.append_empty_data();
-                } else {
-                    stream.append(value);
-                }
+                match value {
+                    Some(val) => stream.append(val),
+                    None => stream.append_empty_data(),
+                };
 
                 match with_check {
                     true => self._check_rlp_raw_encoding_length(&stream.out()),

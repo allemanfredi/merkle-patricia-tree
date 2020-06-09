@@ -100,7 +100,7 @@ impl MerklePatriciaTree {
                     let mut branches_nodes = empty_branch_nodes();
                     branches_nodes[remaining_new_nibbles[0] as usize] = Box::new(new_leaf_node);
 
-                    new_node = Node::Branch(branches_nodes, node_value.to_vec());
+                    new_node = Node::Branch(branches_nodes, Some(node_value.to_vec()));
                 } else {
                     let mut branches_nodes = empty_branch_nodes();
 
@@ -113,13 +113,13 @@ impl MerklePatriciaTree {
                     // updating value. if key is of len equal to 0, update the branch value,
                     // otherwise create a new branch with a leaf node
                     if remaining_new_nibbles.len() == 0 {
-                        new_node = Node::Branch(branches_nodes, value.to_vec());
+                        new_node = Node::Branch(branches_nodes, Some(value.to_vec()));
                     } else {
                         branches_nodes[remaining_new_nibbles[0] as usize] = Box::new(Node::Leaf(
                             remaining_new_nibbles[1..remaining_new_nibbles.len()].to_vec(),
                             value.to_vec(),
                         ));
-                        new_node = Node::Branch(branches_nodes, [].to_vec());
+                        new_node = Node::Branch(branches_nodes, None);
                     }
                 }
 
@@ -188,13 +188,13 @@ impl MerklePatriciaTree {
                     // updating value. if key is of len equal to 0, update the branch value,
                     // otherwise create a new branch with a leaf node as a child
                     if remaining_new_nibbles.len() == 0 {
-                        new_node = Node::Branch(branches_nodes, value.to_vec());
+                        new_node = Node::Branch(branches_nodes, Some(value.to_vec()));
                     } else {
                         branches_nodes[remaining_new_nibbles[0] as usize] = Box::new(Node::Leaf(
                             remaining_new_nibbles[1..remaining_new_nibbles.len()].to_vec(),
                             value.to_vec(),
                         ));
-                        new_node = Node::Branch(branches_nodes, [].to_vec());
+                        new_node = Node::Branch(branches_nodes, None);
                     }
                 }
 
@@ -203,7 +203,7 @@ impl MerklePatriciaTree {
             Node::Branch(ref boxed_nodes, ref node_value) => {
                 // reached end -> update branch value
                 if nibbles.len() == 0 {
-                    return Node::Branch(boxed_nodes.clone(), value.to_vec());
+                    return Node::Branch(boxed_nodes.clone(), Some(value.to_vec()));
                 }
 
                 let new_node = &self._maybe_update_and_delete_storage(
@@ -215,7 +215,7 @@ impl MerklePatriciaTree {
                 let mut updated_boxed_branches = boxed_nodes.clone();
                 updated_boxed_branches[nibbles[0] as usize] = Box::new(new_node.clone());
 
-                return Node::Branch(updated_boxed_branches, node_value.to_vec());
+                return Node::Branch(updated_boxed_branches, node_value.clone());
             }
         }
     }
@@ -232,7 +232,10 @@ impl MerklePatriciaTree {
         let found_node = self._get(&self.root_node.clone(), &nibbles::bytes_to_nibbles(&key));
         match found_node {
             Node::Leaf(ref _nibbles, ref value) => Ok(value.clone()),
-            Node::Branch(ref _boxed_nodes, ref node_value) => Ok(node_value.clone()),
+            Node::Branch(ref _boxed_nodes, ref node_value) => match node_value {
+                Some(value) => Ok(value.clone()),
+                None => Err("Empty Node"),
+            },
             _ => Err("Not Found"),
         }
     }
@@ -305,6 +308,20 @@ mod tests {
 
         let result = trie.get(&String::from("hello").into_bytes()).unwrap();
         assert!(result == String::from("world2").into_bytes());
+    }
+
+    #[test]
+    fn should_not_get_anything_because_of_not_existing_key() {
+        let mut trie = MerklePatriciaTree::new();
+        trie.update(
+            &String::from("hello").into_bytes(),
+            &String::from("world").into_bytes(),
+        );
+
+        let result = trie.get(&String::from("byebye").into_bytes());
+        if let Err(error) = result {
+            assert!(error == String::from("Not Found"));
+        }
     }
 
     #[test]
