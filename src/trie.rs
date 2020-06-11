@@ -104,7 +104,7 @@ impl MerklePatriciaTree {
                 } else {
                     let mut branches_nodes = empty_branch_nodes();
 
-                    // since it's a leaf node, there are no more child (FIXME: probably wrong)
+                    // since it's a leaf node, there are no more child
                     branches_nodes[remaining_current_nibbles[0] as usize] = Box::new(Node::Leaf(
                         remaining_current_nibbles[1..remaining_current_nibbles.len()].to_vec(),
                         node_value.clone(),
